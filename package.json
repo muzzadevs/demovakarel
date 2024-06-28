@@ -9,7 +9,7 @@
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "preinstall": "npx npm-force-resolutions",
-    "install": "npm install --force"
+    "install": "npm install"
   },
   "dependencies": {
     "framer-motion": "^11.2.12",
