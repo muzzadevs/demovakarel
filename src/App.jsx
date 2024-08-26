@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaClipboard } from 'react-icons/fa';
+import { FaClipboard, FaExchangeAlt } from 'react-icons/fa';
 import { RiEraserLine } from 'react-icons/ri';
 import { MdOutlineRecordVoiceOver } from 'react-icons/md';
 import { useSpeechSynthesis } from 'react-speech-kit';
-import diccionario from "./diccionario"
+import diccionario from "./diccionario";
 import logo from "/logo.png";
 
 const Contenedor = styled.div`
@@ -20,6 +20,47 @@ const Contenedor = styled.div`
   padding: 20px;
 `;
 
+const ContenedorSelectores = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 90%;
+  max-width: 400px;
+  margin: 10px 0;
+`;
+
+const SelectorContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 48%;
+`;
+
+const LabelSelector = styled.label`
+  font-size: 12px;
+  color: #ff7f50;
+  margin-bottom: 5px;
+`;
+
+const Seleccion = styled.select`
+  width: 100%;
+  padding: 10px;
+  background-color: #1a1a1a;
+  color: #ffffff;
+  border: 1px solid #ff7f50;
+  border-radius: 10px;
+  font-size: 16px;
+`;
+
+const BotonIntercambiar = styled(FaExchangeAlt)`
+  color: #ff7f50;
+  cursor: pointer;
+  margin: 0 10px;
+
+  &:hover {
+    color: #e06a3e;
+  }
+`;
+
 const ContenedorTextArea = styled.div`
   position: relative;
   width: 90%;
@@ -31,7 +72,7 @@ const AreaTexto = styled(motion.textarea)`
   width: 100%;
   height: 100px;
   padding: 10px;
-  padding-right: 50px; /* Añadir relleno a la derecha */
+  padding-right: 50px;
   background-color: #1a1a1a;
   color: #ffffff;
   border: 1px solid #ff7f50;
@@ -70,7 +111,7 @@ const AreaTextoSoloLectura = styled(motion.textarea)`
   width: 100%;
   min-height: 60px;
   padding: 10px;
-  padding-right: 50px; /* Añadir relleno a la derecha */
+  padding-right: 50px;
   background-color: #1a1a1a;
   color: #ffffff;
   border: 1px solid #ff7f50;
@@ -129,18 +170,6 @@ const IconoLecturaVoz = styled(MdOutlineRecordVoiceOver)`
   }
 `;
 
-const Seleccion = styled.select`
-  width: 90%;
-  max-width: 400px;
-  margin: 10px 0;
-  padding: 10px;
-  background-color: #1a1a1a;
-  color: #ffffff;
-  border: 1px solid #ff7f50;
-  border-radius: 10px;
-  font-size: 16px;
-`;
-
 const Boton = styled.button`
   width: 90%;
   max-width: 400px;
@@ -165,8 +194,6 @@ const Mensaje = styled(motion.div)`
   font-size: 16px;
 `;
 
-
-
 const animacionSacudida = {
   x: [0, -10, 10, -10, 10, 0],
   transition: { duration: 0.5 }
@@ -182,30 +209,55 @@ const desvanecerYSalir = {
 function App() {
   const [textoEntrada, setTextoEntrada] = useState('');
   const [textoTraducido, setTextoTraducido] = useState('');
-  const [idiomaSeleccionado, setIdiomaSeleccionado] = useState('ESPAÑOL');
-  const [idiomaATraducir, setIdiomaATraducir] = useState('RROMANÉS');
+  const [idiomaOrigen, setIdiomaOrigen] = useState('ESPAÑOL');
+  const [idiomaDestino, setIdiomaDestino] = useState('RROMANÉS');
   const [sacudida, setSacudida] = useState(false);
   const [sacudidaPortapapeles, setSacudidaPortapapeles] = useState(false);
   const [mostrarMensaje, setMostrarMensaje] = useState(false);
   const referenciaAreaTexto = useRef(null);
   const { speak } = useSpeechSynthesis();
 
-  const manejarCambioIdioma = (event) => {
-    const idiomaSeleccionado = event.target.value;
-    setIdiomaSeleccionado(idiomaSeleccionado);
-    setIdiomaATraducir(idiomaSeleccionado === 'ESPAÑOL' ? 'RROMANÉS' : 'ESPAÑOL');
+  const manejarCambioIdiomaOrigen = (event) => {
+    const nuevoIdiomaOrigen = event.target.value;
+    setIdiomaOrigen(nuevoIdiomaOrigen);
+
+    // Ajustar el idioma de destino según el idioma de origen
+    if (nuevoIdiomaOrigen === 'EUSKERA' || nuevoIdiomaOrigen === 'ESPAÑOL') {
+      setIdiomaDestino('RROMANÉS');
+    } else if (nuevoIdiomaOrigen === 'RROMANÉS') {
+      setIdiomaDestino('ESPAÑOL'); // Por defecto al intercambiar si es RROMANÉS
+    }
+  };
+
+  const manejarCambioIdiomaDestino = (event) => {
+    const nuevoIdiomaDestino = event.target.value;
+    setIdiomaDestino(nuevoIdiomaDestino);
+  };
+
+  const manejarIntercambioIdiomas = () => {
+    const nuevoIdiomaOrigen = idiomaDestino;
+    const nuevoIdiomaDestino = idiomaOrigen;
+
+    setIdiomaOrigen(nuevoIdiomaOrigen);
+    
+    // Si el nuevo idioma de origen es EUSKERA o ESPAÑOL, el destino solo será RROMANÉS
+    if (nuevoIdiomaOrigen === 'EUSKERA' || nuevoIdiomaOrigen === 'ESPAÑOL') {
+      setIdiomaDestino('RROMANÉS');
+    } else {
+      setIdiomaDestino(nuevoIdiomaDestino); // Si es RROMANÉS, mantener el destino intercambiado
+    }
   };
 
   const manejarTraduccion = () => {
     const palabras = textoEntrada.trim().split(' ');
     const palabrasTraducidas = palabras.map(palabra => {
-      const traduccion = diccionario.find(item => item[idiomaSeleccionado].toLowerCase() === palabra.toLowerCase());
+      const traduccion = diccionario.find(item => item[idiomaOrigen].toLowerCase() === palabra.toLowerCase());
       if (traduccion) {
-        return traduccion[idiomaATraducir];
+        return traduccion[idiomaDestino];
       } else {
         setSacudida(true);
-        setTimeout(() => setSacudida(false), 500); // Restablecer sacudida después de la animación
-        return palabra; // Devolver la palabra original si no se encuentra
+        setTimeout(() => setSacudida(false), 500);
+        return palabra;
       }
     });
     setTextoTraducido(palabrasTraducidas.join(' '));
@@ -217,10 +269,10 @@ function App() {
     setMostrarMensaje(true);
     setTimeout(() => {
       setSacudidaPortapapeles(false);
-    }, 500); // Restablecer sacudida después de la animación
+    }, 500);
     setTimeout(() => {
       setMostrarMensaje(false);
-    }, 3000); // Ocultar mensaje después de 3 segundos
+    }, 3000);
   };
 
   const manejarBorrarTexto = () => {
@@ -242,13 +294,39 @@ function App() {
   return (
     <Contenedor>
       <img src={logo} alt="Logotipo" style={{ maxHeight: '150px' }} />
-      <Seleccion value={idiomaSeleccionado} onChange={manejarCambioIdioma}>
-        <option value="ESPAÑOL">ESPAÑOL</option>
-        <option value="RROMANÉS">RROMANÉS</option>
-      </Seleccion>
+
+      {/* Contenedor con los selectores alineados en una fila */}
+      <ContenedorSelectores>
+        <SelectorContainer>
+          <LabelSelector>DE:</LabelSelector>
+          <Seleccion value={idiomaOrigen} onChange={manejarCambioIdiomaOrigen}>
+            <option value="ESPAÑOL">ESPAÑOL</option>
+            <option value="RROMANÉS">RROMANÉS</option>
+            <option value="EUSKERA">EUSKERA</option>
+          </Seleccion>
+        </SelectorContainer>
+
+        {/* Botón para intercambiar los idiomas */}
+        <BotonIntercambiar onClick={manejarIntercambioIdiomas} />
+
+        <SelectorContainer>
+          <LabelSelector>A:</LabelSelector>
+          <Seleccion value={idiomaDestino} onChange={manejarCambioIdiomaDestino} disabled={idiomaOrigen !== 'RROMANÉS'}>
+            {idiomaOrigen === 'RROMANÉS' ? (
+              <>
+                <option value="ESPAÑOL">ESPAÑOL</option>
+                <option value="EUSKERA">EUSKERA</option>
+              </>
+            ) : (
+              <option value="RROMANÉS">RROMANÉS</option>
+            )}
+          </Seleccion>
+        </SelectorContainer>
+      </ContenedorSelectores>
+
       <ContenedorTextArea>
         <AreaTexto
-          placeholder={`Escribe en ${idiomaSeleccionado}`}
+          placeholder={`Escribe en ${idiomaOrigen}`}
           value={textoEntrada}
           onChange={(e) => setTextoEntrada(e.target.value)}
         />
@@ -260,7 +338,7 @@ function App() {
           <AreaTextoSoloLectura
             readOnly
             ref={referenciaAreaTexto}
-            placeholder={`Traducción en ${idiomaATraducir}`}
+            placeholder={`Traducción en ${idiomaDestino}`}
             value={textoTraducido}
           />
           <ContenedorIconos>

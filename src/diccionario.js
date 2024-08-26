@@ -1,7 +1,7 @@
 const diccionario = [
-    { ESPAÑOL: 'uno', RROMANÉS: 'jekh' },
-    { ESPAÑOL: 'dos', RROMANÉS: 'duj' },
-    { ESPAÑOL: 'tres', RROMANÉS: 'trin' },
+    { ESPAÑOL: 'uno', RROMANÉS: 'jekh', EUSKERA:"bat" },
+    { ESPAÑOL: 'dos', RROMANÉS: 'duj', EUSKERA:"bi" },
+    { ESPAÑOL: 'tres', RROMANÉS: 'trin', EUSKERA:"hiru" },
     { ESPAÑOL: 'cuatro', RROMANÉS: 'eshtar' },
     { ESPAÑOL: 'cinco', RROMANÉS: 'panch' },
     { ESPAÑOL: 'seis', RROMANÉS: 'shov' },
