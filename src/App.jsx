@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaClipboard, FaExchangeAlt } from 'react-icons/fa';
+import { FaExchangeAlt, FaClipboard } from 'react-icons/fa';
 import { RiEraserLine } from 'react-icons/ri';
 import { MdOutlineRecordVoiceOver } from 'react-icons/md';
 import { useSpeechSynthesis } from 'react-speech-kit';
@@ -14,7 +13,6 @@ const Contenedor = styled.div`
   align-items: center;
   justify-content: center;
   background: linear-gradient(270deg, #ff7f50, #000000);
-  background-size: 300%;
   color: #ffffff;
   min-height: 100vh;
   padding: 20px;
@@ -68,18 +66,30 @@ const ContenedorTextArea = styled.div`
   margin: 10px 0;
 `;
 
-const AreaTexto = styled(motion.textarea)`
+const InputTexto = styled.input`
   width: 100%;
-  height: 100px;
   padding: 10px;
-  padding-right: 50px;
   background-color: #1a1a1a;
   color: #ffffff;
   border: 1px solid #ff7f50;
   border-radius: 10px;
-  resize: none;
   font-size: 16px;
+`;
+
+const Dropdown = styled.ul`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background-color: #1a1a1a;
+  border: 1px solid #ff7f50;
+  border-radius: 10px;
+  max-height: 200px;
   overflow-y: auto;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  z-index: 100;
 
   &::-webkit-scrollbar {
     width: 5px;
@@ -89,29 +99,22 @@ const AreaTexto = styled(motion.textarea)`
     background-color: #ff7f50;
     border-radius: 10px;
   }
+`;
 
-  &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
+const DropdownItem = styled.li`
+  padding: 10px;
+  color: #ffffff;
+  cursor: pointer;
+  &:hover {
+    background-color: #ff7f50;
   }
 `;
 
-const ContenedorAreaTextoSoloLectura = styled.div`
-  position: relative;
+const AreaTextoSoloLectura = styled.textarea`
   width: 90%;
   max-width: 400px;
-  margin: 10px 0;
-`;
-
-const EnvolturaAreaTextoSoloLectura = styled(motion.div)`
-  position: relative;
-  width: 100%;
-`;
-
-const AreaTextoSoloLectura = styled(motion.textarea)`
-  width: 100%;
   min-height: 60px;
   padding: 10px;
-  padding-right: 50px;
   background-color: #1a1a1a;
   color: #ffffff;
   border: 1px solid #ff7f50;
@@ -119,6 +122,8 @@ const AreaTextoSoloLectura = styled(motion.textarea)`
   resize: vertical;
   font-size: 16px;
   pointer-events: none;
+  margin-top: 10px;
+  margin-bottom: 20px;
   overflow-y: auto;
 
   &::-webkit-scrollbar {
@@ -129,34 +134,19 @@ const AreaTextoSoloLectura = styled(motion.textarea)`
     background-color: #ff7f50;
     border-radius: 10px;
   }
-
-  &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-  }
 `;
 
 const ContenedorIconos = styled.div`
-  position: absolute;
-  top: 10px;
-  right: 10px;
   display: flex;
+  justify-content: flex-end;
   gap: 10px;
-`;
-
-const IconoPortapapeles = styled(FaClipboard)`
-  color: #ffffff;
-  cursor: pointer;
-  &:hover {
-    color: #e06a3e;
-  }
+  margin-top: 10px;
 `;
 
 const IconoBorrador = styled(RiEraserLine)`
-  position: absolute;
-  top: 10px;
-  right: 10px;
   color: #ffffff;
   cursor: pointer;
+
   &:hover {
     color: #e06a3e;
   }
@@ -165,6 +155,16 @@ const IconoBorrador = styled(RiEraserLine)`
 const IconoLecturaVoz = styled(MdOutlineRecordVoiceOver)`
   color: #ffffff;
   cursor: pointer;
+
+  &:hover {
+    color: #e06a3e;
+  }
+`;
+
+const IconoPortapapeles = styled(FaClipboard)`
+  color: #ffffff;
+  cursor: pointer;
+
   &:hover {
     color: #e06a3e;
   }
@@ -188,177 +188,109 @@ const Boton = styled.button`
   }
 `;
 
-const Mensaje = styled(motion.div)`
-  color: #ff7f50;
-  margin-top: 10px;
-  font-size: 16px;
-`;
-
-const animacionSacudida = {
-  x: [0, -10, 10, -10, 10, 0],
-  transition: { duration: 0.5 }
-};
-
-const desvanecerYSalir = {
-  initial: { opacity: 0, y: 0 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 20 },
-  transition: { duration: 0.5 },
-};
-
 function App() {
   const [textoEntrada, setTextoEntrada] = useState('');
   const [textoTraducido, setTextoTraducido] = useState('');
   const [idiomaOrigen, setIdiomaOrigen] = useState('ESPAÑOL');
   const [idiomaDestino, setIdiomaDestino] = useState('RROMANÉS');
-  const [sacudida, setSacudida] = useState(false);
-  const [sacudidaPortapapeles, setSacudidaPortapapeles] = useState(false);
-  const [mostrarMensaje, setMostrarMensaje] = useState(false);
-  const referenciaAreaTexto = useRef(null);
+  const [sugerencias, setSugerencias] = useState([]);
   const { speak } = useSpeechSynthesis();
 
-  const manejarCambioIdiomaOrigen = (event) => {
-    const nuevoIdiomaOrigen = event.target.value;
-    setIdiomaOrigen(nuevoIdiomaOrigen);
+  const manejarCambioTexto = (e) => {
+    const valor = e.target.value;
+    setTextoEntrada(valor);
 
-    // Ajustar el idioma de destino según el idioma de origen
-    if (nuevoIdiomaOrigen === 'EUSKERA' || nuevoIdiomaOrigen === 'ESPAÑOL') {
-      setIdiomaDestino('RROMANÉS');
-    } else if (nuevoIdiomaOrigen === 'RROMANÉS') {
-      setIdiomaDestino('ESPAÑOL'); // Por defecto al intercambiar si es RROMANÉS
-    }
-  };
-
-  const manejarCambioIdiomaDestino = (event) => {
-    const nuevoIdiomaDestino = event.target.value;
-    setIdiomaDestino(nuevoIdiomaDestino);
-  };
-
-  const manejarIntercambioIdiomas = () => {
-    const nuevoIdiomaOrigen = idiomaDestino;
-    const nuevoIdiomaDestino = idiomaOrigen;
-
-    setIdiomaOrigen(nuevoIdiomaOrigen);
-    
-    // Si el nuevo idioma de origen es EUSKERA o ESPAÑOL, el destino solo será RROMANÉS
-    if (nuevoIdiomaOrigen === 'EUSKERA' || nuevoIdiomaOrigen === 'ESPAÑOL') {
-      setIdiomaDestino('RROMANÉS');
+    if (valor) {
+      const coincidencias = diccionario
+        .filter(item => item[idiomaOrigen]?.toLowerCase().startsWith(valor.toLowerCase()))
+        .map(item => item[idiomaOrigen])
+        .slice(0, 10);
+      setSugerencias(coincidencias);
     } else {
-      setIdiomaDestino(nuevoIdiomaDestino); // Si es RROMANÉS, mantener el destino intercambiado
+      setSugerencias([]);
     }
+  };
+
+  const seleccionarSugerencia = (sugerencia) => {
+    setTextoEntrada(sugerencia);
+    setSugerencias([]);
   };
 
   const manejarTraduccion = () => {
     const palabras = textoEntrada.trim().split(' ');
     const palabrasTraducidas = palabras.map(palabra => {
-      const traduccion = diccionario.find(item => item[idiomaOrigen].toLowerCase() === palabra.toLowerCase());
-      if (traduccion) {
-        return traduccion[idiomaDestino];
-      } else {
-        setSacudida(true);
-        setTimeout(() => setSacudida(false), 500);
-        return palabra;
-      }
+      const traduccion = diccionario.find(item => item[idiomaOrigen]?.toLowerCase() === palabra.toLowerCase());
+      return traduccion ? traduccion[idiomaDestino] : palabra;
     });
     setTextoTraducido(palabrasTraducidas.join(' '));
-  };
-
-  const manejarCopiarAlPortapapeles = () => {
-    navigator.clipboard.writeText(textoTraducido);
-    setSacudidaPortapapeles(true);
-    setMostrarMensaje(true);
-    setTimeout(() => {
-      setSacudidaPortapapeles(false);
-    }, 500);
-    setTimeout(() => {
-      setMostrarMensaje(false);
-    }, 3000);
   };
 
   const manejarBorrarTexto = () => {
     setTextoEntrada('');
     setTextoTraducido('');
+    setSugerencias([]);
+  };
+
+  const manejarCopiarAlPortapapeles = () => {
+    navigator.clipboard.writeText(textoTraducido);
+    alert('Texto copiado al portapapeles');
   };
 
   const manejarLecturaVoz = () => {
     speak({ text: textoTraducido });
   };
 
-  useEffect(() => {
-    if (referenciaAreaTexto.current) {
-      referenciaAreaTexto.current.style.height = 'auto';
-      referenciaAreaTexto.current.style.height = referenciaAreaTexto.current.scrollHeight + 'px';
-    }
-  }, [textoTraducido]);
-
   return (
     <Contenedor>
       <img src={logo} alt="Logotipo" style={{ maxHeight: '150px' }} />
-
-      {/* Contenedor con los selectores alineados en una fila */}
       <ContenedorSelectores>
         <SelectorContainer>
           <LabelSelector>DE:</LabelSelector>
-          <Seleccion value={idiomaOrigen} onChange={manejarCambioIdiomaOrigen}>
+          <Seleccion value={idiomaOrigen} onChange={(e) => setIdiomaOrigen(e.target.value)}>
             <option value="ESPAÑOL">ESPAÑOL</option>
             <option value="RROMANÉS">RROMANÉS</option>
             <option value="EUSKERA">EUSKERA</option>
           </Seleccion>
         </SelectorContainer>
-
-        {/* Botón para intercambiar los idiomas */}
-        <BotonIntercambiar onClick={manejarIntercambioIdiomas} />
-
+        <BotonIntercambiar onClick={() => [setIdiomaOrigen(idiomaDestino), setIdiomaDestino(idiomaOrigen)]} />
         <SelectorContainer>
           <LabelSelector>A:</LabelSelector>
-          <Seleccion value={idiomaDestino} onChange={manejarCambioIdiomaDestino} disabled={idiomaOrigen !== 'RROMANÉS'}>
-            {idiomaOrigen === 'RROMANÉS' ? (
-              <>
-                <option value="ESPAÑOL">ESPAÑOL</option>
-                <option value="EUSKERA">EUSKERA</option>
-              </>
-            ) : (
-              <option value="RROMANÉS">RROMANÉS</option>
-            )}
+          <Seleccion value={idiomaDestino} onChange={(e) => setIdiomaDestino(e.target.value)}>
+            <option value="ESPAÑOL">ESPAÑOL</option>
+            <option value="RROMANÉS">RROMANÉS</option>
+            <option value="EUSKERA">EUSKERA</option>
           </Seleccion>
         </SelectorContainer>
       </ContenedorSelectores>
 
       <ContenedorTextArea>
-        <AreaTexto
+        <InputTexto
           placeholder={`Escribe en ${idiomaOrigen}`}
           value={textoEntrada}
-          onChange={(e) => setTextoEntrada(e.target.value)}
+          onChange={manejarCambioTexto}
         />
-        <IconoBorrador onClick={manejarBorrarTexto} size={20} />
-      </ContenedorTextArea>
-      <Boton onClick={manejarTraduccion}>TRADUCIR</Boton>
-      <ContenedorAreaTextoSoloLectura>
-        <EnvolturaAreaTextoSoloLectura animate={sacudida || sacudidaPortapapeles ? animacionSacudida : {}}>
-          <AreaTextoSoloLectura
-            readOnly
-            ref={referenciaAreaTexto}
-            placeholder={`Traducción en ${idiomaDestino}`}
-            value={textoTraducido}
-          />
-          <ContenedorIconos>
-            <IconoLecturaVoz onClick={manejarLecturaVoz} size={20} />
-            <IconoPortapapeles onClick={manejarCopiarAlPortapapeles} size={20} />
-          </ContenedorIconos>
-        </EnvolturaAreaTextoSoloLectura>
-      </ContenedorAreaTextoSoloLectura>
-      <AnimatePresence>
-        {mostrarMensaje && (
-          <Mensaje
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            variants={desvanecerYSalir}
-          >
-            Copiado al portapapeles
-          </Mensaje>
+        {sugerencias.length > 0 && (
+          <Dropdown>
+            {sugerencias.map((sugerencia, index) => (
+              <DropdownItem key={index} onClick={() => seleccionarSugerencia(sugerencia)}>
+                {sugerencia}
+              </DropdownItem>
+            ))}
+          </Dropdown>
         )}
-      </AnimatePresence>
+      </ContenedorTextArea>
+
+      <Boton onClick={manejarTraduccion}>TRADUCIR</Boton>
+      <AreaTextoSoloLectura
+        readOnly
+        value={textoTraducido}
+        placeholder={`Traducción en ${idiomaDestino}`}
+      />
+      <ContenedorIconos>
+        <IconoBorrador size={24} onClick={manejarBorrarTexto} title="Borrar lo escrito" />
+        <IconoLecturaVoz size={24} onClick={manejarLecturaVoz} title="Leer lo traducido" />
+        <IconoPortapapeles size={24} onClick={manejarCopiarAlPortapapeles} title="Copiar al portapapeles" />
+      </ContenedorIconos>
     </Contenedor>
   );
 }
