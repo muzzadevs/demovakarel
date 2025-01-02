@@ -90,15 +90,6 @@ const Dropdown = styled.ul`
   padding: 0;
   margin: 0;
   z-index: 100;
-
-  &::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: #ff7f50;
-    border-radius: 10px;
-  }
 `;
 
 const DropdownItem = styled.li`
@@ -125,15 +116,6 @@ const AreaTextoSoloLectura = styled.textarea`
   margin-top: 10px;
   margin-bottom: 20px;
   overflow-y: auto;
-
-  &::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: #ff7f50;
-    border-radius: 10px;
-  }
 `;
 
 const ContenedorIconos = styled.div`
@@ -191,10 +173,35 @@ const Boton = styled.button`
 function App() {
   const [textoEntrada, setTextoEntrada] = useState('');
   const [textoTraducido, setTextoTraducido] = useState('');
+  const [sugerencias, setSugerencias] = useState([]);
   const [idiomaOrigen, setIdiomaOrigen] = useState('ESPAÑOL');
   const [idiomaDestino, setIdiomaDestino] = useState('RROMANÉS');
-  const [sugerencias, setSugerencias] = useState([]);
   const { speak } = useSpeechSynthesis();
+
+  const idiomasDisponibles = ['ESPAÑOL', 'RROMANÉS', 'EUSKERA'];
+
+  const obtenerOpcionesDestino = (idiomaOrigen) => {
+    if (idiomaOrigen === 'RROMANÉS') {
+      return ['ESPAÑOL', 'EUSKERA'];
+    } else {
+      return ['RROMANÉS'];
+    }
+  };
+
+  const manejarCambioOrigen = (nuevoOrigen) => {
+    setIdiomaOrigen(nuevoOrigen);
+    const opcionesDestino = obtenerOpcionesDestino(nuevoOrigen);
+    if (!opcionesDestino.includes(idiomaDestino)) {
+      setIdiomaDestino(opcionesDestino[0]);
+    }
+  };
+
+  const manejarIntercambio = () => {
+    const nuevoOrigen = idiomaDestino;
+    const nuevoDestino = idiomaOrigen;
+    manejarCambioOrigen(nuevoOrigen);
+    setIdiomaDestino(nuevoDestino);
+  };
 
   const manejarCambioTexto = (e) => {
     const valor = e.target.value;
@@ -202,8 +209,10 @@ function App() {
 
     if (valor) {
       const coincidencias = diccionario
-        .filter(item => item[idiomaOrigen]?.toLowerCase().startsWith(valor.toLowerCase()))
-        .map(item => item[idiomaOrigen])
+        .filter((item) =>
+          item[idiomaOrigen]?.toLowerCase().startsWith(valor.toLowerCase())
+        )
+        .map((item) => item[idiomaOrigen])
         .slice(0, 10);
       setSugerencias(coincidencias);
     } else {
@@ -218,8 +227,10 @@ function App() {
 
   const manejarTraduccion = () => {
     const palabras = textoEntrada.trim().split(' ');
-    const palabrasTraducidas = palabras.map(palabra => {
-      const traduccion = diccionario.find(item => item[idiomaOrigen]?.toLowerCase() === palabra.toLowerCase());
+    const palabrasTraducidas = palabras.map((palabra) => {
+      const traduccion = diccionario.find(
+        (item) => item[idiomaOrigen]?.toLowerCase() === palabra.toLowerCase()
+      );
       return traduccion ? traduccion[idiomaDestino] : palabra;
     });
     setTextoTraducido(palabrasTraducidas.join(' '));
@@ -246,23 +257,32 @@ function App() {
       <ContenedorSelectores>
         <SelectorContainer>
           <LabelSelector>DE:</LabelSelector>
-          <Seleccion value={idiomaOrigen} onChange={(e) => setIdiomaOrigen(e.target.value)}>
-            <option value="ESPAÑOL">ESPAÑOL</option>
-            <option value="RROMANÉS">RROMANÉS</option>
-            <option value="EUSKERA">EUSKERA</option>
+          <Seleccion
+            value={idiomaOrigen}
+            onChange={(e) => manejarCambioOrigen(e.target.value)}
+          >
+            {idiomasDisponibles.map((idioma) => (
+              <option key={idioma} value={idioma}>
+                {idioma}
+              </option>
+            ))}
           </Seleccion>
         </SelectorContainer>
-        <BotonIntercambiar onClick={() => [setIdiomaOrigen(idiomaDestino), setIdiomaDestino(idiomaOrigen)]} />
+        <BotonIntercambiar onClick={manejarIntercambio} />
         <SelectorContainer>
           <LabelSelector>A:</LabelSelector>
-          <Seleccion value={idiomaDestino} onChange={(e) => setIdiomaDestino(e.target.value)}>
-            <option value="ESPAÑOL">ESPAÑOL</option>
-            <option value="RROMANÉS">RROMANÉS</option>
-            <option value="EUSKERA">EUSKERA</option>
+          <Seleccion
+            value={idiomaDestino}
+            onChange={(e) => setIdiomaDestino(e.target.value)}
+          >
+            {obtenerOpcionesDestino(idiomaOrigen).map((idioma) => (
+              <option key={idioma} value={idioma}>
+                {idioma}
+              </option>
+            ))}
           </Seleccion>
         </SelectorContainer>
       </ContenedorSelectores>
-
       <ContenedorTextArea>
         <InputTexto
           placeholder={`Escribe en ${idiomaOrigen}`}
@@ -272,14 +292,16 @@ function App() {
         {sugerencias.length > 0 && (
           <Dropdown>
             {sugerencias.map((sugerencia, index) => (
-              <DropdownItem key={index} onClick={() => seleccionarSugerencia(sugerencia)}>
+              <DropdownItem
+                key={index}
+                onClick={() => seleccionarSugerencia(sugerencia)}
+              >
                 {sugerencia}
               </DropdownItem>
             ))}
           </Dropdown>
         )}
       </ContenedorTextArea>
-
       <Boton onClick={manejarTraduccion}>TRADUCIR</Boton>
       <AreaTextoSoloLectura
         readOnly
@@ -289,7 +311,11 @@ function App() {
       <ContenedorIconos>
         <IconoBorrador size={24} onClick={manejarBorrarTexto} title="Borrar lo escrito" />
         <IconoLecturaVoz size={24} onClick={manejarLecturaVoz} title="Leer lo traducido" />
-        <IconoPortapapeles size={24} onClick={manejarCopiarAlPortapapeles} title="Copiar al portapapeles" />
+        <IconoPortapapeles
+          size={24}
+          onClick={manejarCopiarAlPortapapeles}
+          title="Copiar al portapapeles"
+        />
       </ContenedorIconos>
     </Contenedor>
   );
